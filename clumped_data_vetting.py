@@ -279,10 +279,23 @@ if len(ETH_01_list) > 1:
 		print("Output saved to ", png_out_ETH)
 
 	plt.tight_layout()
-	plt.show()	
+	plt.show()
+	
+# Check summary file for problems
+for i in range(len(df_comp.vial_loc)):
+	if df_comp.transducer_pressure.iloc[i] < 20:
+		print("WARNING: Transducer pressure below 20 mbar for replicate in location ", int(df_comp.vial_loc.iloc[i]), "(", df_comp.sample_name.iloc[i],")")
+		print("ACTUAL PRESSURE = ", df_comp.transducer_pressure.iloc[i])
+	if df_comp.balance.iloc[i] > 1:
+		print("WARNING:  Replicate is more than 1% misbalanced in location ", int(df_comp.vial_loc.iloc[i]), "(", df_comp.sample_name.iloc[i],")")
+		print("ACTUAL BALANCE = ", df_comp.balance.iloc[i])
+	if df_comp.d18_err.iloc[i] > 0.005:
+		print("WARNING:  d18O standard error > 0.005 per mil in location ", int(df_comp.vial_loc.iloc[i]), "(", df_comp.sample_name.iloc[i],")")
+		print("ACTUAL D18O SE = ", df_comp.d18_err.iloc[i])
+	if df_comp.D47_err.iloc[i] > 0.02:
+		print("WARNING:  D47 standard error (Nu style) > 0.020 per mil in location ", int(df_comp.vial_loc.iloc[i]), "(", df_comp.sample_name.iloc[i],")")
+		print("ACTUAL D47 SE = ", df_comp.D47_err.iloc[i])
+	if df_comp.D48.iloc[i] > 1:
+		print("WARNING:  D48 > 1 per mil in location ", int(df_comp.vial_loc.iloc[i]), "(", df_comp.sample_name.iloc[i],")")
+		print("ACTUAL D48 = ", df_comp.D48.iloc[i])
 
-# next steps: have this program plot data from another csv on top of this in a different color
-# column names are also terrible... consider making script that makes them nice? or just type them all out?
-
-# convert to floats dynamically somehow? after first three columns ish everything is a float
-# label ALLL columns
