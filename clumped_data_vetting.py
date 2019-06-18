@@ -17,17 +17,13 @@ os.chdir(dir_path)
 filenames = os.listdir() # list all the files in the working directory
 Nu_Results_file = str([filename for i,filename in enumerate(filenames) if 'Results.csv' in filename]).replace("['",'').replace("']",'') # finds the name of the Nu Results file; converts from list to string; includes some additional character clean-up
 
-
 save_folder = "1_Data_Checks/"
 
 baseline = "C:/Users/noaha/Documents/MIT/mass_spec/data_compilations/mass_spec_baseline_oct_nov_2018.xlsx" # --- >> BASELINE FILE HERE <<  This is ~1 month of data selected for consistency
 
-
-#comp = input("Enter the folder path and filename of the Nu results file: ") 
-
 # ------------------- DATA CLEANING --------------------
 
-# Names of columns output by Nu results files. Columns that aren't often analyzed are just left as the title of the col in excel.
+# Names of columns output by Nu results files. Columns that aren't often analyzed are just left as the title of the col in excel (this should change)
 column_headers = ['dir','batch','file','sample_name','method','analysis','batch_start','run_time','sample_weight','vial_loc', 
 	'init_sam_beam','yield','coldfinger','transducer_pressure','inlet_pirani','chops','max_pump','raw_pump','sam_op','min_ref_beam','max_ref_beam',
 	'pre_balance_sam_beam','pre_dep_ref_beam', 'final_sam_beam','final_ref_beam','dep_factor','balance_end','balance','ref_bellow', 'sam_bellow', 'pirani','curr_mass','AG',
@@ -43,7 +39,6 @@ df_comp = pandas.read_csv(Nu_Results_file, names = column_headers)
 df_comp.drop(df_comp.index[:3], inplace=True) # Removes garbage from top of Nu results file
 
 # Set output path and filename
-png_out = save_folder + str(df_comp.batch.iloc[2])
 save_output = input("Save output? (y/n):  ")
 if (save_output == 'y') or (save_output == 'Y') or (save_output == 'yes'):
 	os.mkdir("1_Data_Checks")
@@ -179,7 +174,7 @@ plt.ylabel(D49_legend)
 plt.legend(loc = 'upper right')
 
 if (save_output == 'y') or (save_output == 'Y') or (save_output == 'yes'):
-	png_out_sam_prep = png_out + "_sample_prep" + ".png"
+	png_out_sam_prep = save_folder + str(df_comp.batch.iloc[2]) + "_sample_prep" + ".png"
 	plt.savefig(png_out_sam_prep, bbox_inches='tight')
 	print("Output saved to ", png_out_sam_prep)
 	print('---------------------')
@@ -228,7 +223,7 @@ if len(NCM_list) > 1:
 	plt.ylabel("Standard deviation")
 
 	if (save_output == 'y') or (save_output == 'Y') or (save_output == 'yes'):
-		png_out_NCM = png_out + "_NCM" + ".png"
+		png_out_NCM = save_folder + str(df_comp.batch.iloc[2]) + "_NCM" + ".png"
 		plt.savefig(png_out_NCM, bbox_inches='tight')
 		print("Output saved to ", png_out_NCM)
 		print('---------------------')
@@ -292,7 +287,7 @@ if len(ETH_01_list) > 1:
 	plt.ylabel(D47_legend)	
 
 	if (save_output == 'y') or (save_output == 'Y') or (save_output == 'yes'):
-		png_out_ETH = png_out + "_ETH" + ".png"
+		png_out_ETH = save_folder + str(df_comp.batch.iloc[2]) + "_ETH" + ".png"
 		plt.savefig(png_out_ETH, bbox_inches='tight')
 		print("Output saved to ", png_out_ETH)
 
@@ -332,7 +327,7 @@ def check_results_files(results_file):
 	overall_temp_mean = df_results['47'].iloc[1:122].mean()
 	easotope_SD = statistics.stdev([temp_mean_block_1, temp_mean_block_2, temp_mean_block_3]) # Stddev between each block
 
-	# Stddev for each block
+	# Stddev for each block -- these are currently NOT used in the code.
 	SD_block_1 = df_results['47'].iloc[1:40].std()
 	SD_block_2 = df_results['47'].iloc[42:81].std()
 	SD_block_3 = df_results['47'].iloc[83:122].std()
@@ -343,13 +338,13 @@ def check_results_files(results_file):
 	# Notifies user if SD is over threshold and shows them the SD
 	if easotope_SD > 0.05:
 		print('---------------------')
-		epoch = os.path.getmtime(results_file)
-		print("**",results_file[11:-4], "**", "was last modified **", time.strftime("%Y-%m-%d %H:%M", time.localtime(epoch)), "**")
+		epoch = os.path.getmtime(results_file) # gets last modified timestamp for file (should be date of creation)
+		print("**",results_file[11:-4], "**", "was last modified **", time.strftime("%Y-%m-%d %H:%M", time.localtime(epoch)), "**") # converts time to a nice format and displays name of replicate
 		print("WARNING: D47 SD (Easotope style) is greater than 0.05 per mil.")
 		print("D47 SD (Easotope style) = ", round(easotope_SD, 4))
 		
 
-		# Finds cycles that are more than 3 SD outside the overall mean (mean of all 47 measurements for this replicate) and reports them to user
+		# Finds cycles that are more than 3 SD (SD comes from comparing blocks to each other) outside the mean for the block and reports them to user
 		for i in range(len(df_results['47'])):			
 				if i < 41: 
 					if (abs(df_results['47'].iloc[i]) > abs(temp_mean_block_1) + (3*easotope_SD)) or (abs(df_results['47'].iloc[i]) < abs(temp_mean_block_1) - (3*easotope_SD)):
