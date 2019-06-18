@@ -3,24 +3,27 @@
 
 
 import os
+import time
 import matplotlib.pyplot as plt
 from matplotlib.pyplot import figure
 import pandas
 from datetime import datetime
-import re
+import statistics
+
 
 # Provide path to files of interest-- must be full Nu results files (not summary). Comp = comparison; df = data frame
-
-###this baseline part needs to be fixed so that it can run on anyone's computer without needed to change the code
-baseline = r"C:/Users/noaha/Documents/MIT/mass_spec/data_compilations/mass_spec_baseline_oct_nov_2018.xlsx" # --- >> BASELINE FILE HERE <<  This is ~1 month of data selected for consistency
-
-# Store filepath of target directory; replace argument removes backslashes; r and lstrip remove spaces on either side of the filepath string:
-dir_path = input("Enter the folder path of your results files (drag & drop): ").replace('\ ',' ').lstrip().rstrip()
-os.chdir(dir_path) # set working directory to dir_path
+dir_path = input("Enter the folder path of your results files (drag & drop): ").replace(r'\ ',' ').lstrip().rstrip().replace(r'\\ ', r'\ ').replace('"', '')
+os.chdir(dir_path)
 filenames = os.listdir() # list all the files in the working directory
 Nu_Results_file = str([filename for i,filename in enumerate(filenames) if 'Results.csv' in filename]).replace("['",'').replace("']",'') # finds the name of the Nu Results file; converts from list to string; includes some additional character clean-up
 
-# Names of columns output by Nu results files. Columns that aren't often analyzed are just left as the title of the col in excel.
+save_folder = "1_Data_Checks/"
+
+baseline = "C:/Users/noaha/Documents/MIT/mass_spec/data_compilations/mass_spec_baseline_oct_nov_2018.xlsx" # --- >> BASELINE FILE HERE <<  This is ~1 month of data selected for consistency
+
+# ------------------- DATA CLEANING --------------------
+
+# Names of columns output by Nu results files. Columns that aren't often analyzed are just left as the title of the col in excel (this should change)
 column_headers = ['dir','batch','file','sample_name','method','analysis','batch_start','run_time','sample_weight','vial_loc', 
 	'init_sam_beam','yield','coldfinger','transducer_pressure','inlet_pirani','chops','max_pump','raw_pump','sam_op','min_ref_beam','max_ref_beam',
 	'pre_balance_sam_beam','pre_dep_ref_beam', 'final_sam_beam','final_ref_beam','dep_factor','balance_end','balance','ref_bellow', 'sam_bellow', 'pirani','curr_mass','AG',
@@ -35,12 +38,17 @@ df_base = pandas.read_excel(baseline, names = column_headers)
 df_comp = pandas.read_csv(Nu_Results_file, names = column_headers)
 
 # Set output path and filename
-# Not sure if this should be kept: png_out = "C:/Users/noaha/Documents/MIT/mass_spec/data_compilations/" + str(df_comp.batch.iloc[2])
-os.mkdir("1Data_checks") #makes a new folder in the directory for storing graphs and other output—-NEEDS TO BE CALLED WHEN SAVING STUFF BELOW 
 save_output = input("Save output? (y/n):  ")
+if (save_output == 'y') or (save_output == 'Y') or (save_output == 'yes'):
+	os.mkdir("1_Data_Checks")
+	print("New directory created: ", dir_path, "/", save_folder)
 
 # ------------------- DATA CLEANING --------------------
 df_comp.drop(df_comp.index[:3], inplace=True) # Removes garbage from top of Nu results file
+
+
+
+print('---------------------')
 
 #initialize some lists
 timestamp_list = []
@@ -170,9 +178,10 @@ plt.ylabel(D49_legend)
 plt.legend(loc = 'upper right')
 
 if (save_output == 'y') or (save_output == 'Y') or (save_output == 'yes'):
-	png_out_sam_prep = png_out + "_sample_prep" + ".png"
+	png_out_sam_prep = save_folder + str(df_comp.batch.iloc[2]) + "_sample_prep" + ".png"
 	plt.savefig(png_out_sam_prep, bbox_inches='tight')
 	print("Output saved to ", png_out_sam_prep)
+	print('---------------------')
 
 plt.tight_layout()
 plt.show()
@@ -218,9 +227,10 @@ if len(NCM_list) > 1:
 	plt.ylabel("Standard deviation")
 
 	if (save_output == 'y') or (save_output == 'Y') or (save_output == 'yes'):
-		png_out_NCM = png_out + "_NCM" + ".png"
+		png_out_NCM = save_folder + str(df_comp.batch.iloc[2]) + "_NCM" + ".png"
 		plt.savefig(png_out_NCM, bbox_inches='tight')
 		print("Output saved to ", png_out_NCM)
+		print('---------------------')
 	
 	plt.tight_layout()
 	plt.show()
@@ -245,7 +255,7 @@ if len(ETH_01_list) > 1:
 	plt.text(.86, std_stddev_list[1]-0.005, n2, zorder = 6, style = 'italic', fontsize = 9)
 	plt.text(1.86, std_stddev_list[2]-0.005, n3, zorder = 6, style = 'italic', fontsize = 9)
 	plt.text(2.86, std_stddev_list[3]-0.005, n4, zorder = 6, style = 'italic', fontsize = 9)
-	stddev_47_label = "Standard deviation " + D47_legend
+	stddev_47_label = "External standard deviation " + D47_legend
 	plt.ylabel(stddev_47_label)
 	plt.xlabel("Sample name")
 	 
@@ -281,9 +291,10 @@ if len(ETH_01_list) > 1:
 	plt.ylabel(D47_legend)	
 
 	if (save_output == 'y') or (save_output == 'Y') or (save_output == 'yes'):
-		png_out_ETH = png_out + "_ETH" + ".png"
+		png_out_ETH = save_folder + str(df_comp.batch.iloc[2]) + "_ETH" + ".png"
 		plt.savefig(png_out_ETH, bbox_inches='tight')
 		print("Output saved to ", png_out_ETH)
+		print('---------------------')
 
 	plt.tight_layout()
 	plt.show()
@@ -306,3 +317,71 @@ for i in range(len(df_comp.vial_loc)):
 		print("WARNING:  D48 > 1 per mil in location ", int(df_comp.vial_loc.iloc[i]), "(", df_comp.sample_name.iloc[i],")")
 		print("ACTUAL D48 = ", df_comp.D48.iloc[i])
 
+# --------------------------- START OF FUNCTION ---------------------
+def check_results_files(results_file):
+	''' Function that checks results files for common issues and reports them to user'''
+	# Reads in results file (e.g. Result_3925 ETH-02.csv)
+
+	df_results = pandas.read_csv(results_file, skiprows = 7)
+	df_results.rename(columns = {'Unnamed: 0':'rep',}, inplace = True) # First column is unnamed: this changes it to 'rep'
+
+	# Calculate mean of cap 47 for each block and SD between them
+	temp_mean_block_1 = df_results['47'].iloc[1:40].mean()
+	temp_mean_block_2 = df_results['47'].iloc[42:81].mean()
+	temp_mean_block_3 = df_results['47'].iloc[83:122].mean()
+	overall_temp_mean = df_results['47'].iloc[1:122].mean()
+	easotope_SD = statistics.stdev([temp_mean_block_1, temp_mean_block_2, temp_mean_block_3]) # Stddev between each block
+
+	# Stddev for each block -- these are currently NOT used in the code.
+	SD_block_1 = df_results['47'].iloc[1:40].std()
+	SD_block_2 = df_results['47'].iloc[42:81].std()
+	SD_block_3 = df_results['47'].iloc[83:122].std()
+
+	warning_list = []
+
+
+	# Notifies user if SD is over threshold and shows them the SD
+	if easotope_SD > 0.05:
+		print('---------------------')
+		epoch = os.path.getmtime(results_file) # gets last modified timestamp for file (should be date of creation)
+		print("**",results_file[11:-4], "**", "was last modified **", time.strftime("%Y-%m-%d %H:%M", time.localtime(epoch)), "**") # converts time to a nice format and displays name of replicate
+		print("WARNING: D47 SD (Easotope style) is greater than 0.05 per mil.")
+		print("D47 SD (Easotope style) = ", round(easotope_SD, 4))
+		
+
+		# Finds cycles that are more than 3 SD (SD comes from comparing blocks to each other) outside the mean for the block and reports them to user
+		for i in range(len(df_results['47'])):			
+				if i < 41: 
+					if (abs(df_results['47'].iloc[i]) > abs(temp_mean_block_1) + (3*easotope_SD)) or (abs(df_results['47'].iloc[i]) < abs(temp_mean_block_1) - (3*easotope_SD)):
+						msg = "** Block 1, cycle " + str(df_results['rep'].iloc[i]).strip('Sam ') + " **"
+						warning_list.append(msg)			
+				elif i < 82:
+					if (abs(df_results['47'].iloc[i]) > abs(temp_mean_block_2) + (3*easotope_SD)) or (abs(df_results['47'].iloc[i]) < abs(temp_mean_block_2) - (3*easotope_SD)):
+						msg = "** Block 2, cycle " + str(df_results['rep'].iloc[i]).strip('Sam ') + " **"
+						warning_list.append(msg)
+				else:
+					if (abs(df_results['47'].iloc[i]) > abs(temp_mean_block_3) + (3*easotope_SD)) or (abs(df_results['47'].iloc[i]) < abs(temp_mean_block_3) - (3*easotope_SD)):
+						msg = "** Block 3, cycle " + str(df_results['rep'].iloc[i]).strip('Sam ') + " **"
+						warning_list.append(msg)
+		
+
+	#  If more than 10 cycles exceed 3 SD, tells user to disable rep. Otherwise, prints the list of warnings.
+	if len(warning_list) > 10:
+		print("More than 10 cycles have values more than 3 SD from the mean. This replicate should be ***disabled***.")
+	elif len(warning_list) > 0: 
+		print("Consider disabling the following cycles:")
+		for j in warning_list:
+			print(j)
+		print('---------------------')
+
+
+		#------------------------------------ END OF FUNCTION -----------------------------------------------------
+
+	# Function call for every results file in directory
+for results_file in os.listdir(dir_path):
+	if "Result_" in results_file and ".csv" in results_file:
+		check_results_files(results_file)
+		
+
+print('---------------------')
+print('PROGRAM COMPLETE')
