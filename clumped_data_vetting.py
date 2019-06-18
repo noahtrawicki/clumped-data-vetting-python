@@ -301,41 +301,42 @@ for i in range(len(df_comp.vial_loc)):
 		print("ACTUAL D48 = ", df_comp.D48.iloc[i])
 
 # Reads in results file (e.g. Result_3925 ETH-02.csv)
-results_files = "C:/Users/noaha/Documents/MIT/mass_spec/data_compilations/all_results/2018/20180105 clumped Wilsonbreen ABJ/Result_3925 ETH-02.csv"
-df_results = pandas.read_csv(results_files, skiprows = 7)
-df_results.rename(columns = {'Unnamed: 0':'rep',}, inplace = True) # First column is unnamed: this changes it to 'rep'
+def check_results_files():
+	results_files = "C:/Users/noaha/Documents/MIT/mass_spec/data_compilations/all_results/2018/20180105 clumped Wilsonbreen ABJ/Result_3925 ETH-02.csv"
+	df_results = pandas.read_csv(results_files, skiprows = 7)
+	df_results.rename(columns = {'Unnamed: 0':'rep',}, inplace = True) # First column is unnamed: this changes it to 'rep'
 
-# Calculate mean of cap 47 for each block and SD between them
-temp_mean_block_1 = df_results['47'].iloc[1:40].mean()
-temp_mean_block_2 = df_results['47'].iloc[42:81].mean()
-temp_mean_block_3 = df_results['47'].iloc[83:122].mean()
-overall_temp_mean = df_results['47'].iloc[1:122].mean()
-easotope_SD = statistics.stdev([temp_mean_block_1, temp_mean_block_2, temp_mean_block_3])
+	# Calculate mean of cap 47 for each block and SD between them
+	temp_mean_block_1 = df_results['47'].iloc[1:40].mean()
+	temp_mean_block_2 = df_results['47'].iloc[42:81].mean()
+	temp_mean_block_3 = df_results['47'].iloc[83:122].mean()
+	overall_temp_mean = df_results['47'].iloc[1:122].mean()
+	easotope_SD = statistics.stdev([temp_mean_block_1, temp_mean_block_2, temp_mean_block_3])
 
-# Notifies user if SD is over threshold and shows them the SD
-if easotope_SD > 0.05:
-	print("WARNING: D47 SD (Easotope style) is greater than 0.05 per mil.")
-	print("D47 SD (Easotope style) = ", round(easotope_SD, 4))
-	warning_list = []
-	
-	# Finds cycles that are more than 3 SD outside the overall mean (mean of all 47 measurements for this replicate) and reports them to user
-	for i in range(len(df_results['47'])):
-		if (abs(df_results['47'].iloc[i]) > abs(overall_temp_mean) + (3*easotope_SD)) or (abs(df_results['47'].iloc[i]) < abs(overall_temp_mean) - (3*easotope_SD)):
-			if i < 41: 
-				msg = "** Block 1, cycle " + str(df_results['rep'].iloc[i]).strip('Sam ') + " **"
-				warning_list.append(msg)			
-			elif i < 82:
-				msg = "** Block 2, cycle " + str(df_results['rep'].iloc[i]).strip('Sam ') + " **"
-				warning_list.append(msg)
-			else:
-				msg = "** Block 3, cycle " + str(df_results['rep'].iloc[i]).strip('Sam ') + " **"
-				warning_list.append(msg)
+	# Notifies user if SD is over threshold and shows them the SD
+	if easotope_SD > 0.05:
+		print("WARNING: D47 SD (Easotope style) is greater than 0.05 per mil.")
+		print("D47 SD (Easotope style) = ", round(easotope_SD, 4))
+		warning_list = []
+
+		# Finds cycles that are more than 3 SD outside the overall mean (mean of all 47 measurements for this replicate) and reports them to user
+		for i in range(len(df_results['47'])):
+			if (abs(df_results['47'].iloc[i]) > abs(overall_temp_mean) + (3*easotope_SD)) or (abs(df_results['47'].iloc[i]) < abs(overall_temp_mean) - (3*easotope_SD)):
+				if i < 41: 
+					msg = "** Block 1, cycle " + str(df_results['rep'].iloc[i]).strip('Sam ') + " **"
+					warning_list.append(msg)			
+				elif i < 82:
+					msg = "** Block 2, cycle " + str(df_results['rep'].iloc[i]).strip('Sam ') + " **"
+					warning_list.append(msg)
+				else:
+					msg = "** Block 3, cycle " + str(df_results['rep'].iloc[i]).strip('Sam ') + " **"
+					warning_list.append(msg)
 
 
-#  If more than 10 cycles exceed 3 SD, tells user to disable rep. Otherwise, prints the list of warnings.
-if len(warning_list) > 10:
-	print("More than 10 cycles have values more than 3 SD from the mean. This replicate should be disabled.")
-else: 
-	print("Consider disabling the following cycles:")
-	for j in warning_list:
-		print(j)
+	#  If more than 10 cycles exceed 3 SD, tells user to disable rep. Otherwise, prints the list of warnings.
+	if len(warning_list) > 10:
+		print("More than 10 cycles have values more than 3 SD from the mean. This replicate should be disabled.")
+	else: 
+		print("Consider disabling the following cycles:")
+		for j in warning_list:
+			print(j)
