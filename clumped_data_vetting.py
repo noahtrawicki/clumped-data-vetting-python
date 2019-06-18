@@ -7,14 +7,18 @@ import matplotlib.pyplot as plt
 from matplotlib.pyplot import figure
 import pandas
 from datetime import datetime
+import re
 
 # Provide path to files of interest-- must be full Nu results files (not summary). Comp = comparison; df = data frame
 
+###this baseline part needs to be fixed so that it can run on anyone's computer without needed to change the code
 baseline = r"C:/Users/noaha/Documents/MIT/mass_spec/data_compilations/mass_spec_baseline_oct_nov_2018.xlsx" # --- >> BASELINE FILE HERE <<  This is ~1 month of data selected for consistency
-comp = r"C:/Users/noaha/Documents/MIT/mass_spec/data_compilations/random_test.csv" # --- >> FILE FROM CLUMPED RUN HERE << whatever results file (NOT summary) you want to look at
-#comp = input("Enter the folder path and filename of the Nu results file: ") 
 
-# ------------------- DATA CLEANING --------------------
+# Store filepath of target directory; replace argument removes backslashes; r and lstrip remove spaces on either side of the filepath string:
+dir_path = input("Enter the folder path of your results files (drag & drop): ").replace('\ ',' ').lstrip().rstrip()
+os.chdir(dir_path) # set working directory to dir_path
+filenames = os.listdir() # list all the files in the working directory
+Nu_Results_file = str([filename for i,filename in enumerate(filenames) if 'Results.csv' in filename]).replace("['",'').replace("']",'') # finds the name of the Nu Results file; converts from list to string; includes some additional character clean-up
 
 # Names of columns output by Nu results files. Columns that aren't often analyzed are just left as the title of the col in excel.
 column_headers = ['dir','batch','file','sample_name','method','analysis','batch_start','run_time','sample_weight','vial_loc', 
@@ -28,12 +32,15 @@ column_headers = ['dir','batch','file','sample_name','method','analysis','batch_
 
 # Create pandas dataframes
 df_base = pandas.read_excel(baseline, names = column_headers) 
-df_comp = pandas.read_csv(comp, names = column_headers)
-df_comp.drop(df_comp.index[:3], inplace=True) # Removes garbage from top of Nu results file
+df_comp = pandas.read_csv(Nu_Results_file, names = column_headers)
 
 # Set output path and filename
-png_out = "C:/Users/noaha/Documents/MIT/mass_spec/data_compilations/" + str(df_comp.batch.iloc[2])
+# Not sure if this should be kept: png_out = "C:/Users/noaha/Documents/MIT/mass_spec/data_compilations/" + str(df_comp.batch.iloc[2])
+os.mkdir("1Data_checks") #makes a new folder in the directory for storing graphs and other output—-NEEDS TO BE CALLED WHEN SAVING STUFF BELOW 
 save_output = input("Save output? (y/n):  ")
+
+# ------------------- DATA CLEANING --------------------
+df_comp.drop(df_comp.index[:3], inplace=True) # Removes garbage from top of Nu results file
 
 #initialize some lists
 timestamp_list = []
