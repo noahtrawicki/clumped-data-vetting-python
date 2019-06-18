@@ -290,6 +290,7 @@ if len(ETH_01_list) > 1:
 		png_out_ETH = save_folder + str(df_comp.batch.iloc[2]) + "_ETH" + ".png"
 		plt.savefig(png_out_ETH, bbox_inches='tight')
 		print("Output saved to ", png_out_ETH)
+		print('---------------------')
 
 	plt.tight_layout()
 	plt.show()
