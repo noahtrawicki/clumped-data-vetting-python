@@ -1,7 +1,12 @@
 # This program uses data from Nu results files to help assess common problems with mass spec runs. For some parameters, it compares the values of
 # the user input results files with a baseline from when the mass spec was running nicely. Make sure you have a baseline file loaded.
 
+# TO DO :
+# change NCM plots to same style as ETH plots
+# fix column headers
 
+
+# Import these modules.
 import os
 import time
 import matplotlib.pyplot as plt
@@ -37,21 +42,23 @@ column_headers = ['dir','batch','file','sample_name','method','analysis','batch_
 df_base = pandas.read_excel(baseline, names = column_headers) 
 df_comp = pandas.read_csv(Nu_Results_file, names = column_headers)
 
-# Set output path and filename
-save_output = input("Save output? (y/n):  ")
-if (save_output == 'y') or (save_output == 'Y') or (save_output == 'yes'):
+# Check if the user wants to save the output and if there is already data checks folder created.
+
+print('---------------------')
+if os.path.isdir("1_Data_Checks"):
+	print("Save folder already exists.")
+else:
 	os.mkdir("1_Data_Checks")
 	print("New directory created: ", dir_path, "/", save_folder)
 
 # ------------------- DATA CLEANING --------------------
 df_comp.drop(df_comp.index[:3], inplace=True) # Removes garbage from top of Nu results file
-
-
-
 print('---------------------')
+
 
 #initialize some lists
 timestamp_list = []
+all_warnings = []
 ETH_01_list = []
 ETH_02_list = []
 ETH_03_list = []
@@ -60,6 +67,7 @@ NCM_list = []
 count = 0
 
 # For some reason, the data from the csv are all imported as strings. This changes everything used below to a float. If you add a new column to a plot, make sure to add it here.
+# There's probably a better way to do this, but not that the first several columns are strings/datetimes
 df_comp.transducer_pressure = df_comp.transducer_pressure.astype(float)
 df_comp.sample_weight = df_comp.sample_weight.astype(float)
 df_comp.D47 = df_comp.D47.astype(float)
@@ -74,18 +82,19 @@ df_comp.D49 = df_comp.D49.astype(float)
 df_comp.balance = df_comp.balance.astype(float)		
 df_comp.d18 = df_comp.d18.astype(float)	
 
-# This uses datetime module to get year/month/day as ints, and then divides them into fractions of a year to create a timestamp of type float
-# for i in range(len(df_comp.run_time)):
-	
-# 	this_one = datetime.strptime(df_comp.run_time.iloc[i], '%Y/%m/%d %H:%M:%S')
-# 	year = int(this_one.strftime("%Y"))
-# 	month = int(this_one.strftime("%m"))
-# 	day = int(this_one.strftime("%d"))
-# 	hour = int(this_one.strftime("%H"))
-# 	minute = int(this_one.strftime("%M"))
-# 	timestamp = year + month/12 + day/365 + hour/(24*365) + minute/(24*365*60)
-# 	timestamp_list.append(timestamp)
-# df_comp['Timestamp'] = timestamp_list
+# This uses datetime module to get year/month/day as ints, and then divides them into fractions of a year to create a timestamp of type float so that it can be easily plotted. Not currently used.
+def get_timestamps(df_comp):
+	for i in range(len(df_comp.run_time)):		
+		run_date = datetime.strptime(df_comp.run_time.iloc[i], '%Y/%m/%d %H:%M:%S')
+		year = int(run_date.strftime("%Y"))
+		month = int(run_date.strftime("%m"))
+		day = int(run_date.strftime("%d"))
+		hour = int(run_date.strftime("%H"))
+		minute = int(run_date.strftime("%M"))
+		timestamp = year + month/12 + day/365 + hour/(24*365) + minute/(24*365*60)
+		timestamp_list.append(timestamp)
+	df_comp['Timestamp'] = timestamp_list
+	print("Plottable timestamp column added to dataframe.")
 
 # This creates lists of index locations of ETH 1/2/3/4 and NCM 
 for sample in df_comp.sample_name:
@@ -116,10 +125,12 @@ if len(ETH_01_list) > 1:
 
 first_analysis_time = str(datetime.strptime(df_comp.run_time.iloc[0], '%Y/%m/%d %H:%M:%S')) # Gets time/date of first analysis as string
 
-D49_legend = r'$\Delta$' + '49' 
-D48_legend = r'$\Delta$' + '48' 
-D47_legend = r'$\Delta$' + '47' 
-d18_legend = r'$\delta$' + '18'
+# Makes delta symbols that can be plotted in legends/axes
+cap_delta = r'$\Delta$'
+small_delta = r'$\delta$'
+
+print('Data imported and cleaned.')
+print('---------------------')
 #------------------------------ PLOTS -----------------------
 
 # Make things look nice-- applies to all plots
@@ -128,8 +139,15 @@ plt.rcParams["font.family"] = "Arial"
 plt.rc('axes', labelsize=medium_font, labelweight = 'bold')
 
 baseline_col = 'gray'
+marker_color_1 = 'orange'
+marker_color_2 = '#FF6347' # #FF6347 is tomato red
+marker_color_3 = '#1E90FF' # #1E90FF is dodger blue
+marker_color_4 = 'green'
+threshold_line_color = '#cb4154'
+dodger_blue = '#1E90FF'
+
 baseline_opac = 0.5
-first_analysis_time = first_analysis_time[:10]
+first_analysis_time = first_analysis_time[:10] # gets Y/M/D
 
 # Creates a function that makes a nicely formatted grid
 def make_grid():
@@ -147,14 +165,15 @@ plt.ylim(10, 40)
 plt.xlabel("Sample weight")
 plt.ylabel("Transducer pressure")
 plt.scatter(df_base.sample_weight.iloc[3:], df_base.transducer_pressure.iloc[3:], marker = 'o', color = baseline_col, alpha = baseline_opac, zorder = 3, label = 'Baseline')
-plt.scatter(df_comp.sample_weight.iloc[1:], df_comp.transducer_pressure.iloc[1:], marker = 'o', color = 'orange', alpha = 1, zorder = 6, label = first_analysis_time)
+plt.scatter(this_tuple)
+plt.scatter(df_comp.sample_weight.iloc[1:], df_comp.transducer_pressure.iloc[1:], marker = 'o', color = marker_color_1, alpha = 1, zorder = 6, label = first_analysis_time)
 plt.legend(loc = 'lower right')
 
 # plots max pumpover pressure vs. sample weight for basline and your run
 plt.subplot(2,2,2)
 make_grid()
 plt.scatter(df_base.sample_weight.iloc[3:], df_base.max_pump.iloc[3:], marker = 'o', color = baseline_col, alpha = baseline_opac, zorder = 3, label = 'Baseline')
-plt.scatter(df_comp.sample_weight.iloc[1:], df_comp.max_pump.iloc[1:], marker = 'o', color = 'orange', alpha = 1, zorder = 6, label = first_analysis_time)
+plt.scatter(df_comp.sample_weight.iloc[1:], df_comp.max_pump.iloc[1:], marker = 'o', color = marker_color_1, alpha = 1, zorder = 6, label = first_analysis_time)
 plt.xlabel("Sample weight")
 plt.ylabel("Max pumpover pressure")
 plt.legend(loc = 'lower right')
@@ -163,7 +182,7 @@ plt.legend(loc = 'lower right')
 plt.subplot(2,2,3)
 make_grid()
 plt.scatter(df_base.vial_loc.iloc[3:], df_base.balance.iloc[3:], marker = 'o', color = baseline_col, alpha = baseline_opac, zorder = 3, label = 'Baseline')
-plt.scatter(df_comp.vial_loc.iloc[1:], df_comp.balance.iloc[1:], marker = 'o', color = 'orange', alpha = 1, zorder = 6, label = first_analysis_time)
+plt.scatter(df_comp.vial_loc.iloc[1:], df_comp.balance.iloc[1:], marker = 'o', color = marker_color_1, alpha = 1, zorder = 6, label = first_analysis_time)
 plt.xlabel("Vial Number")
 plt.ylabel("Balance %")
 plt.legend(loc = 'lower right')
@@ -171,17 +190,17 @@ plt.legend(loc = 'lower right')
 # Plots D49 vs. vial location for baseline and your run
 plt.subplot(2,2,4)
 make_grid()
-plt.scatter(df_base.vial_loc.iloc[3:], df_base.D49.iloc[3:], marker = 'o', color = 'gray', alpha = 0.4, zorder = 3, label = 'Baseline')
-plt.scatter(df_comp.vial_loc.iloc[1:], df_comp.D49.iloc[1:], marker = 'o', color = 'orange', alpha = 1, zorder = 6, label = first_analysis_time)
+plt.scatter(df_base.vial_loc.iloc[3:], df_base.D49.iloc[3:], marker = 'o', color = baseline_col, alpha = baseline_opac, zorder = 3, label = 'Baseline')
+plt.scatter(df_comp.vial_loc.iloc[1:], df_comp.D49.iloc[1:], marker = 'o', color = marker_color_1, alpha = 1, zorder = 6, label = first_analysis_time)
 plt.xlabel("Vial Number")
-plt.ylabel(D49_legend)
+plt.ylabel(cap_delta + '49')
 plt.legend(loc = 'upper right')
 
-if (save_output == 'y') or (save_output == 'Y') or (save_output == 'yes'):
-	png_out_sam_prep = save_folder + str(df_comp.batch.iloc[2]) + "_sample_prep" + ".png"
-	plt.savefig(png_out_sam_prep, bbox_inches='tight')
-	print("Output saved to ", png_out_sam_prep)
-	print('---------------------')
+
+png_out_sam_prep = save_folder + str(df_comp.batch.iloc[1]) + "_sample_prep" + ".png"
+plt.savefig(png_out_sam_prep, bbox_inches='tight')
+print("Output saved to ", png_out_sam_prep)
+print('---------------------')
 
 plt.tight_layout()
 plt.show()
@@ -198,39 +217,38 @@ if len(NCM_list) > 1:
 
 	plt.subplot(2,2,1)
 	make_grid()
-	plt.scatter(df_comp.vial_loc.iloc[NCM_list], df_comp.D47.iloc[NCM_list], marker = 'o', color = '#FF6347', alpha = 0.8, zorder = 3, label = "NCM")
+	plt.scatter(df_comp.vial_loc.iloc[NCM_list], df_comp.D47.iloc[NCM_list], marker = 'o', color = marker_color_2, alpha = 0.8, zorder = 3, label = "NCM")
 	plt.legend(loc = 'upper right')
 	plt.xlabel("Vial Number")
-	plt.ylabel(D47_legend)
+	plt.ylabel(cap_delta + '47')
 
 	plt.subplot(2,2,2)
 	make_grid()
-	plt.bar("NCM", NCM_stddev_D47, alpha = 0.8, color = 'orange', zorder = 3, edgecolor = 'black')
+	plt.bar("NCM", NCM_stddev_D47, alpha = 0.8, color = baseline_col, zorder = 3, edgecolor = 'black')
 	NCM_n =  "n = " + str(len(NCM_list))
 	plt.text(-0.14, 0.01, NCM_n, zorder = 6, style = 'italic', fontsize = 9)
-	plt.axhline(y=0.05, color='#cb4154', linestyle='--', linewidth = 2.5, zorder = 6) # Threshold for bad sample
+	plt.axhline(y=0.05, color = threshold_line_color, linestyle='--', linewidth = 2.5, zorder = 6) # Threshold for bad sample
 	plt.ylabel("Standard deviation")
 
 	plt.subplot(2,2,3)
 	make_grid()
-	plt.scatter(df_comp.vial_loc.iloc[NCM_list], df_comp.d18.iloc[NCM_list], marker = 'o', color = '#FF6347', alpha = 0.8, zorder = 3, label = "NCM")
+	plt.scatter(df_comp.vial_loc.iloc[NCM_list], df_comp.d18.iloc[NCM_list], marker = 'o', color = marker_color_2, alpha = 0.8, zorder = 3, label = "NCM")
 	plt.legend(loc = 'upper right')
 	plt.xlabel("Vial Number")
-	plt.ylabel(d18_legend)
+	plt.ylabel(small_delta + '18')
 
 	plt.subplot(2,2,4)
 	make_grid()
-	plt.bar("NCM", NCM_stddev_d18, alpha = 0.8, color = 'orange', zorder = 3, edgecolor = 'black')
+	plt.bar("NCM", NCM_stddev_d18, alpha = 0.8, color = marker_color_1, zorder = 3, edgecolor = 'black')
 	NCM_n =  "n = " + str(len(NCM_list))
 	plt.text(-0.14, 0.01, NCM_n, zorder = 6, style = 'italic', fontsize = 9)
-	plt.axhline(y=0.05, color='#cb4154', linestyle='--', linewidth = 2.5, zorder = 6) # Threshold for bad sample
+	plt.axhline(y=0.05, color=threshold_line_color, linestyle='--', linewidth = 2.5, zorder = 6) # Threshold for bad sample
 	plt.ylabel("Standard deviation")
 
-	if (save_output == 'y') or (save_output == 'Y') or (save_output == 'yes'):
-		png_out_NCM = save_folder + str(df_comp.batch.iloc[2]) + "_NCM" + ".png"
-		plt.savefig(png_out_NCM, bbox_inches='tight')
-		print("Output saved to ", png_out_NCM)
-		print('---------------------')
+	png_out_NCM = save_folder + str(df_comp.batch.iloc[1]) + "_NCM" + ".png"
+	plt.savefig(png_out_NCM, bbox_inches='tight')
+	print("Output saved to ", png_out_NCM)
+	print('---------------------')
 	
 	plt.tight_layout()
 	plt.show()
@@ -249,26 +267,25 @@ if len(ETH_01_list) > 1:
 	plt.subplot(2, 2, 1)
 	make_grid()
 	#plt.bar(std_list, std_stddev_list, alpha = 0.8, color = 'orange', zorder = 3, edgecolor = 'black')
-	plt.scatter(std_list, std_stddev_list, alpha = 0.8, color = 'orange', zorder = 3, s = 100, edgecolor = 'black' )
-	plt.axhline(y=0.035, color='#cb4154', linestyle='--', linewidth = 2.5) # Threshold for bad sample
+	plt.scatter(std_list, std_stddev_list, alpha = 0.8, color = marker_color_1, zorder = 3, s = 100, edgecolor = 'black' )
+	plt.axhline(y=0.035, color= threshold_line_color, linestyle='--', linewidth = 2.5) # Threshold for bad sample
 	plt.text(-0.14, std_stddev_list[0]-0.005, n1, zorder = 6, style = 'italic', fontsize = 9)
 	plt.text(.86, std_stddev_list[1]-0.005, n2, zorder = 6, style = 'italic', fontsize = 9)
 	plt.text(1.86, std_stddev_list[2]-0.005, n3, zorder = 6, style = 'italic', fontsize = 9)
 	plt.text(2.86, std_stddev_list[3]-0.005, n4, zorder = 6, style = 'italic', fontsize = 9)
-	stddev_47_label = "External standard deviation " + D47_legend
-	plt.ylabel(stddev_47_label)
+	plt.ylabel(cap_delta + '47' + 'External SD ')
 	plt.xlabel("Sample name")
 	 
 	# plots std error for D47, D48, and d18 on log scale
 	plt.subplot(2, 2, 2)
 	make_grid()
-	plt.scatter(df_comp.vial_loc.iloc[1:], df_comp.D48_err.iloc[1:], marker = 'o', color = 'orange', alpha = 0.8, zorder = 3, label = D48_legend)
-	plt.scatter(df_comp.vial_loc.iloc[1:], df_comp.D47_err.iloc[1:], marker = 'o', color = 'green', alpha = 0.8, zorder = 3, label = D47_legend)
-	plt.scatter(df_comp.vial_loc.iloc[1:], df_comp.d18_err.iloc[1:], marker = 'o', color = '#1E90FF', alpha = 0.8, zorder = 3, label = d18_legend)
+	plt.scatter(df_comp.vial_loc.iloc[1:], df_comp.D48_err.iloc[1:], marker = 'o', color = marker_color_1, alpha = 0.8, zorder = 3, label = (cap_delta + '48'))
+	plt.scatter(df_comp.vial_loc.iloc[1:], df_comp.D47_err.iloc[1:], marker = 'o', color = marker_color_4, alpha = 0.8, zorder = 3, label = (cap_delta + '47'))
+	plt.scatter(df_comp.vial_loc.iloc[1:], df_comp.d18_err.iloc[1:], marker = 'o', color = marker_color_3, alpha = 0.8, zorder = 3, label = (small_delta + '18'))
 	plt.yscale("log")
-	plt.axhline(y=0.02, color='green', linestyle='--', linewidth = 1.5, alpha = 0.8) # Threshold for bad sample
-	plt.axhline(y=0.004, color='#1E90FF', linestyle='--', linewidth = 1.5, alpha = 0.8) # Threshold for bad sample
-	plt.axhline(y=0.15, color='orange', linestyle='--', linewidth = 1.5, alpha = 0.8) # Threshold for bad sample
+	plt.axhline(y=0.02, color=marker_color_4, linestyle='--', linewidth = 1.5, alpha = 0.8) # Threshold for bad sample
+	plt.axhline(y=0.004, color=marker_color_3, linestyle='--', linewidth = 1.5, alpha = 0.8) # Threshold for bad sample
+	plt.axhline(y=0.15, color=marker_color_1, linestyle='--', linewidth = 1.5, alpha = 0.8) # Threshold for bad sample
 	plt.xlabel("Vial Number")
 	plt.ylabel("Std error (log scale)")
 	plt.legend(loc = 'lower right')
@@ -276,37 +293,36 @@ if len(ETH_01_list) > 1:
 	# plots D47 value of ETH standards over the course of the run
 	plt.subplot(2,2,3)
 	make_grid()
-	plt.scatter(df_comp.vial_loc.iloc[ETH_01_list], df_comp.D47.iloc[ETH_01_list], marker = 'o', color = '#FF6347', s = 100, edgecolor = 'black', alpha = 0.8, zorder = 3, label = "ETH_01")
-	plt.scatter(df_comp.vial_loc.iloc[ETH_02_list], df_comp.D47.iloc[ETH_02_list], marker = 'o', color = '#1E90FF', s = 80, edgecolor = 'black', alpha = 0.8, zorder = 3, label = "ETH_02")
+	plt.scatter(df_comp.vial_loc.iloc[ETH_01_list], df_comp.D47.iloc[ETH_01_list], marker = 'o', color = marker_color_2, s = 100, edgecolor = 'black', alpha = 0.8, zorder = 3, label = "ETH_01")
+	plt.scatter(df_comp.vial_loc.iloc[ETH_02_list], df_comp.D47.iloc[ETH_02_list], marker = 'o', color = marker_color_3, s = 80, edgecolor = 'black', alpha = 0.8, zorder = 3, label = "ETH_02")
 	plt.legend(loc = 'upper right')
 	plt.xlabel("Vial Number")
-	plt.ylabel(D47_legend)	
+	plt.ylabel(cap_delta + '47')	
 
 	plt.subplot(2,2,4)
 	make_grid()
-	plt.scatter(df_comp.vial_loc.iloc[ETH_03_list], df_comp.D47.iloc[ETH_03_list], marker = 'o', color = 'orange', s = 100, edgecolor = 'black', alpha = 0.8, zorder = 3, label = "ETH-03")
-	plt.scatter(df_comp.vial_loc.iloc[ETH_04_list], df_comp.D47.iloc[ETH_04_list], marker = 'o', color = 'green', s = 100, edgecolor = 'black', alpha = 0.8, zorder = 3, label = "ETH_04")
+	plt.scatter(df_comp.vial_loc.iloc[ETH_03_list], df_comp.D47.iloc[ETH_03_list], marker = 'o', color = marker_color_1, s = 100, edgecolor = 'black', alpha = 0.8, zorder = 3, label = "ETH-03")
+	plt.scatter(df_comp.vial_loc.iloc[ETH_04_list], df_comp.D47.iloc[ETH_04_list], marker = 'o', color = marker_color_4, s = 100, edgecolor = 'black', alpha = 0.8, zorder = 3, label = "ETH_04")
 	plt.legend(loc = 'upper right')
 	plt.xlabel("Vial Number")
-	plt.ylabel(D47_legend)	
+	plt.ylabel(cap_delta + '47')	
 
-	if (save_output == 'y') or (save_output == 'Y') or (save_output == 'yes'):
-		png_out_ETH = save_folder + str(df_comp.batch.iloc[2]) + "_ETH" + ".png"
-		plt.savefig(png_out_ETH, bbox_inches='tight')
-		print("Output saved to ", png_out_ETH)
-		print('---------------------')
+	
+	png_out_ETH = save_folder + str(df_comp.batch.iloc[1]) + "_ETH" + ".png"
+	#plt.savefig(png_out_ETH, bbox_inches='tight') # should be png_out_ETH but will try random text to try to fix bug
+	print("Output saved to ", png_out_ETH)
+	print('---------------------')
 
 	plt.tight_layout()
 	plt.show()
 	
 # Check summary file for problems
+print('----- WARNING MESSAGES -----')
 for i in range(len(df_comp.vial_loc)):
 	if df_comp.transducer_pressure.iloc[i] < 20:
-		print("WARNING: Transducer pressure below 20 mbar for replicate in location ", int(df_comp.vial_loc.iloc[i]), "(", df_comp.sample_name.iloc[i],")")
-		print("ACTUAL PRESSURE = ", df_comp.transducer_pressure.iloc[i])
+		print("WARNING: Transducer pressure < 20 mbar on vial ", int(df_comp.vial_loc.iloc[i]), "(", df_comp.sample_name.iloc[i],"): PRESSURE = ", df_comp.transducer_pressure.iloc[i])		
 	if df_comp.balance.iloc[i] > 1:
-		print("WARNING:  Replicate is more than 1% misbalanced in location ", int(df_comp.vial_loc.iloc[i]), "(", df_comp.sample_name.iloc[i],")")
-		print("ACTUAL BALANCE = ", df_comp.balance.iloc[i])
+		print("WARNING:  Replicate > 1% misbalanced on vial ", int(df_comp.vial_loc.iloc[i]), "(", df_comp.sample_name.iloc[i],"): BALNCE = ",  df_comp.balance.iloc[i])
 	if df_comp.d18_err.iloc[i] > 0.005:
 		print("WARNING:  d18O standard error > 0.005 per mil in location ", int(df_comp.vial_loc.iloc[i]), "(", df_comp.sample_name.iloc[i],")")
 		print("ACTUAL D18O SE = ", df_comp.d18_err.iloc[i])
@@ -320,12 +336,17 @@ for i in range(len(df_comp.vial_loc)):
 # --------------------------- START OF FUNCTION ---------------------
 def check_results_files(results_file):
 	''' Function that checks results files for common issues and reports them to user'''
-	# Reads in results file (e.g. Result_3925 ETH-02.csv)
+	# Reads in results file (e.g. Result_3925 ETH-02.csv). 	
 
 	df_results = pandas.read_csv(results_file, skiprows = 7)
 	df_results.rename(columns = {'Unnamed: 0':'rep',}, inplace = True) # First column is unnamed: this changes it to 'rep'
 
-	# Calculate mean of cap 47 for each block and SD between them
+	file_number = (int(results_file[7:11]))
+	if file_number > 9628: # deals with slightly different Nu results file format around 3/21/2019. If you update Easotope/Nu software and get bugs, play with this.
+		df_results = df_results.drop(df_results.index[[41, 42, 84, 85]])		
+		df_results['47'] = df_results['47'].astype(float)		
+
+	# Calculate mean of cap 47 for each block, mean of all cycles, and SD between blocks
 	temp_mean_block_1 = df_results['47'].iloc[1:40].mean()
 	temp_mean_block_2 = df_results['47'].iloc[42:81].mean()
 	temp_mean_block_3 = df_results['47'].iloc[83:122].mean()
@@ -338,50 +359,65 @@ def check_results_files(results_file):
 	SD_block_3 = df_results['47'].iloc[83:122].std()
 
 	warning_list = []
-
+	current_sample = results_file[11:-4]
+	SD_threshold = 0.05 # Sets the SD (easotope style) threshold that flags a sample
 
 	# Notifies user if SD is over threshold and shows them the SD
-	if easotope_SD > 0.05:
+	if easotope_SD > SD_threshold:
 		print('---------------------')
 		epoch = os.path.getmtime(results_file) # gets last modified timestamp for file (should be date of creation)
-		print("**",results_file[11:-4], "**", "was last modified **", time.strftime("%Y-%m-%d %H:%M", time.localtime(epoch)), "**") # converts time to a nice format and displays name of replicate
-		print("WARNING: D47 SD (Easotope style) is greater than 0.05 per mil.")
-		print("D47 SD (Easotope style) = ", round(easotope_SD, 4))
-		
+		fmtted_time = time.strftime("%Y-%m-%d %H:%M", time.localtime(epoch))
+		print("**",current_sample, fmtted_time, "**") # converts LAST MODIFIED time to a nice format and displays name of replicate
+		print("WARNING: D47 SD (Easotope style) is > 0.05 per mil. SD = ", round(easotope_SD, 4))		
 
 		# Finds cycles that are more than 3 SD (SD comes from comparing blocks to each other) outside the mean for the block and reports them to user
-		for i in range(len(df_results['47'])):			
+		for i in range(len(df_results['47'])):
+				cycle_number = int(df_results['rep'].iloc[i].strip('Sam ').strip('Ref ')) + 1 # This is **CRITICAL**: in Easotope, the first cycle doesn't contain any data, so it is always n + 1 comapred to results file !!!	
 				if i < 41: 
-					if (abs(df_results['47'].iloc[i]) > abs(temp_mean_block_1) + (3*easotope_SD)) or (abs(df_results['47'].iloc[i]) < abs(temp_mean_block_1) - (3*easotope_SD)):
-						msg = "** Block 1, cycle " + str(df_results['rep'].iloc[i]).strip('Sam ') + " **"
+					if (abs(df_results['47'].iloc[i]) > abs(overall_temp_mean) + (3*easotope_SD)) or (abs(df_results['47'].iloc[i]) < abs(temp_mean_block_1) - (3*easotope_SD)):
+						msg = "** Block 1, cycle " + str(cycle_number) + " **"
 						warning_list.append(msg)			
 				elif i < 82:
-					if (abs(df_results['47'].iloc[i]) > abs(temp_mean_block_2) + (3*easotope_SD)) or (abs(df_results['47'].iloc[i]) < abs(temp_mean_block_2) - (3*easotope_SD)):
-						msg = "** Block 2, cycle " + str(df_results['rep'].iloc[i]).strip('Sam ') + " **"
+					if (abs(df_results['47'].iloc[i]) > abs(overall_temp_mean) + (3*easotope_SD)) or (abs(df_results['47'].iloc[i]) < abs(temp_mean_block_2) - (3*easotope_SD)):
+						msg = "** Block 2, cycle " + str(cycle_number) + " **"
 						warning_list.append(msg)
 				else:
-					if (abs(df_results['47'].iloc[i]) > abs(temp_mean_block_3) + (3*easotope_SD)) or (abs(df_results['47'].iloc[i]) < abs(temp_mean_block_3) - (3*easotope_SD)):
-						msg = "** Block 3, cycle " + str(df_results['rep'].iloc[i]).strip('Sam ') + " **"
+					if (abs(df_results['47'].iloc[i]) > abs(overall_temp_mean) + (3*easotope_SD)) or (abs(df_results['47'].iloc[i]) < abs(temp_mean_block_3) - (3*easotope_SD)):
+						msg = "** Block 3, cycle " + str(cycle_number) + " **"
 						warning_list.append(msg)
 		
-
-	#  If more than 10 cycles exceed 3 SD, tells user to disable rep. Otherwise, prints the list of warnings.
+	#  If more than 10 cycles exceed 3 SD, tells user to disable rep. Otherwise, prints the list of warnings and outputs as .txt file.
+	
 	if len(warning_list) > 10:
-		print("More than 10 cycles have values more than 3 SD from the mean. This replicate should be ***disabled***.")
-	elif len(warning_list) > 0: 
+		print("More than 10 cycles have values more than 3 SD from the mean. This replicate should be ***disabled***")
+
+	elif len(warning_list) > 0:		
 		print("Consider disabling the following cycles:")
 		for j in warning_list:
+			rep_name_time = current_sample + " " + fmtted_time + " "			
+			all_warnings.append(rep_name_time + j)
 			print(j)
-		print('---------------------')
+		print('---------------------')		
 
-
-		#------------------------------------ END OF FUNCTION -----------------------------------------------------
+#------------------------------------ END OF FUNCTION CHECK_RESULTS_FILES()-----------------------------------------------------
 
 	# Function call for every results file in directory
 for results_file in os.listdir(dir_path):
-	if "Result_" in results_file and ".csv" in results_file:
-		check_results_files(results_file)
-		
+	if "Result_" in results_file and ".csv" in results_file and os.path.getsize(results_file) > 5000: # Grabs all results csv files that have data in them.
+		try:
+			check_results_files(results_file)
+		except KeyError: # I've seen slight variations in the Nu output files, where everything is shifted by a row. Not sure why this happens-- all I can think of is to skip over problematic files.
+			print("There was a Key Error. This might be caused by a bug in the Nu output files, an update to Nu software, \
+				an update to Easotope software, or a bug in this code. If this is persistent, talk to Noah.")		
+print('---------------------')
 
+cycle_disable_path = save_folder + "Cycles_to_disable.txt" 		
+txt_file = open(cycle_disable_path, "w+")
+for warning in all_warnings:
+	txt_file.write(warning)
+	txt_file.write('\n')
+txt_file.close()
+
+print('Look in folder', save_folder, ' for results from this program.')
 print('---------------------')
 print('PROGRAM COMPLETE')
