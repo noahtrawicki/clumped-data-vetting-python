@@ -406,17 +406,23 @@ txt_file.write('\n')
 # --------------------------- START OF FUNCTION ---------------------
 def check_results_files(results_file, count):
 	''' Function that checks results files for common issues and reports them to user'''
-	# Reads in results file (e.g. Result_3925 ETH-02.csv). 	
+	# Reads in results file (e.g. Result_3925 ETH-02.csv).
+		
 	
 	df_results = pandas.read_csv(results_file, skiprows = 7)
 	df_results.rename(columns = {'Unnamed: 0':'rep',}, inplace = True) # First column is unnamed: this changes it to 'rep'
 
-	file_number = (int(results_file[7:11]))
+	results_file.replace("_", "0") # Gets rid of Y2K issue
+
+
+	file_number = (int(results_file[7:12]))
 	if file_number > 9628: # deals with slightly different Nu results file format around 3/21/2019. If you update Easotope/Nu software and get bugs, play with this.
 		df_results = df_results.drop(df_results.index[[41, 42, 84, 85]])		
 		df_results['47'] = df_results['47'].astype(float)		
 
 	# Calculate mean of cap 47 for each block, mean of all cycles, and SD between blocks
+	
+	
 	temp_mean_block_1 = df_results['47'].iloc[1:40].mean()
 	temp_mean_block_2 = df_results['47'].iloc[42:81].mean()
 	temp_mean_block_3 = df_results['47'].iloc[83:122].mean()
