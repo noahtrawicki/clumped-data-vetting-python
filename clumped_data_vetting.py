@@ -327,10 +327,11 @@ if len(ETH_01_list) > 1:
 	#plt.bar(std_list, std_stddev_list, alpha = 0.8, color = 'orange', zorder = 3, edgecolor = 'black')
 	plt.scatter(std_list, std_stddev_list, alpha = 0.8, color = color_1, zorder = 3, s = 100, edgecolor = 'black' )
 	plt.axhline(y=0.035, color= threshold_line_color, linestyle='--', linewidth = 2.5) # Threshold for bad sample
-	plt.text(-0.14, std_stddev_list[0]-0.015, n1, zorder = 6, style = 'italic', fontsize = 9)
-	plt.text(.86, std_stddev_list[1]-0.015, n2, zorder = 6, style = 'italic', fontsize = 9)
-	plt.text(1.86, std_stddev_list[2]-0.015, n3, zorder = 6, style = 'italic', fontsize = 9)
-	plt.text(2.86, std_stddev_list[3]-0.015, n4, zorder = 6, style = 'italic', fontsize = 9)
+	plt.text(-0.14, std_stddev_list[0]-0.04, n1, zorder = 6, style = 'italic', fontsize = 9)
+	plt.text(.86, std_stddev_list[1]-0.04, n2, zorder = 6, style = 'italic', fontsize = 9)
+	plt.text(1.86, std_stddev_list[2]-0.04, n3, zorder = 6, style = 'italic', fontsize = 9)
+	plt.text(2.86, std_stddev_list[3]-0.04, n4, zorder = 6, style = 'italic', fontsize = 9)
+	plt.gca().set_ylim(bottom=0) 
 	plt.ylabel(cap47 + ' External SD ')
 	plt.xlabel("Sample name")
 	 
@@ -406,23 +407,19 @@ txt_file.write('\n')
 # --------------------------- START OF FUNCTION ---------------------
 def check_results_files(results_file, count):
 	''' Function that checks results files for common issues and reports them to user'''
-	# Reads in results file (e.g. Result_3925 ETH-02.csv).
-		
+	# Reads in results file (e.g. Result_3925 ETH-02.csv).		
 	
 	df_results = pandas.read_csv(results_file, skiprows = 7)
 	df_results.rename(columns = {'Unnamed: 0':'rep',}, inplace = True) # First column is unnamed: this changes it to 'rep'
 
 	results_file.replace("_", "0") # Gets rid of Y2K issue
 
-
 	file_number = (int(results_file[7:12]))
 	if file_number > 9628: # deals with slightly different Nu results file format around 3/21/2019. If you update Easotope/Nu software and get bugs, play with this.
 		df_results = df_results.drop(df_results.index[[41, 42, 84, 85]])		
 		df_results['47'] = df_results['47'].astype(float)		
 
-	# Calculate mean of cap 47 for each block, mean of all cycles, and SD between blocks
-	
-	
+	# Calculate mean of cap 47 for each block, mean of all cycles, and SD between blocks	
 	temp_mean_block_1 = df_results['47'].iloc[1:40].mean()
 	temp_mean_block_2 = df_results['47'].iloc[42:81].mean()
 	temp_mean_block_3 = df_results['47'].iloc[83:122].mean()
@@ -430,13 +427,13 @@ def check_results_files(results_file, count):
 	overall_temp_mean = (temp_mean_block_1 + temp_mean_block_2 + temp_mean_block_3)/3
 	easotope_SD = statistics.stdev([temp_mean_block_1, temp_mean_block_2, temp_mean_block_3]) # Stddev between each block
 
-	# Stddev for each block -- these are currently NOT used in the code.
+	# Stddev for each block -- these are currently NOT used in the code, but it's handy to have this hanging around.
 	SD_block_1 = df_results['47'].iloc[1:40].std()
 	SD_block_2 = df_results['47'].iloc[42:81].std()
 	SD_block_3 = df_results['47'].iloc[83:122].std()
 
 	warning_list = []
-	current_sample = results_file[11:-4]
+	current_sample = results_file[12:-4]
 	SD_threshold = 0.05 # Sets the SD (easotope style) threshold that flags a sample
 
 	# Notifies user if SD is over threshold and shows them the SD
@@ -446,26 +443,26 @@ def check_results_files(results_file, count):
 		cycle_num_list = []
 		figure(figsize=(10,7))
 
-		# Finds cycles that are more than 3 SD (SD comes from comparing blocks to each other) outside the mean for the block, writes to file,
+		# Finds cycles that are more than 3 SD (SD comes from comparing blocks to each other) outside the overall mean cap 47 value of the analysis, writes to file,
 		# and plots cap 47 value of high SD reps in "High_SD_replicates folder"
 		for i in range(len(df_results['47'])):
 
 				cycle_number = int(df_results['rep'].iloc[i].strip('Sam ').strip('Ref ')) + 1 # This is **CRITICAL**: in Easotope, the first cycle doesn't contain any data, 
-				# so it is always n + 1 comapred to results file !!!	
+				# so it is always n + 1 compared to results file !!!	
 				
-				if i < 41: 
-					if (abs(df_results['47'].iloc[i]) > (abs(overall_temp_mean) + (3*easotope_SD))) or (abs(df_results['47'].iloc[i]) < (abs(temp_mean_block_1) - (3*easotope_SD))):
+				if i < 41:
+					if (df_results['47'].iloc[i]) > ((overall_temp_mean) + (3*easotope_SD)) or (df_results['47'].iloc[i]) < ((overall_temp_mean) - (3*easotope_SD)):
 						msg = "** Block 1, cycle " + str(cycle_number) + " **"
 						warning_list.append(msg)
 						plt.scatter(i/2, df_results['47'].iloc[i], color = threshold_line_color, edgecolor = 'black', zorder = 6)
 
 				elif i < 82:
-					if (abs(df_results['47'].iloc[i]) > (abs(overall_temp_mean) + (3*easotope_SD))) or (abs(df_results['47'].iloc[i]) < (abs(temp_mean_block_1) - (3*easotope_SD))):
+					if ((df_results['47'].iloc[i]) > ((overall_temp_mean) + (3*easotope_SD))) or ((df_results['47'].iloc[i]) < ((overall_temp_mean) - (3*easotope_SD))):
 						msg = "** Block 2, cycle " + str(cycle_number) + " **"
 						plt.scatter(i/2, df_results['47'].iloc[i], color = threshold_line_color, edgecolor = 'black', zorder = 6)
 						warning_list.append(msg)
 				else:
-					if (abs(df_results['47'].iloc[i]) > (abs(overall_temp_mean) + (3*easotope_SD))) or (abs(df_results['47'].iloc[i]) < (abs(temp_mean_block_1) - (3*easotope_SD))):
+					if ((df_results['47'].iloc[i]) > ((overall_temp_mean) + (3*easotope_SD))) or ((df_results['47'].iloc[i]) < ((overall_temp_mean) - (3*easotope_SD))):
 						msg = "** Block 3, cycle " + str(cycle_number) + " **"
 						warning_list.append(msg)
 						plt.scatter(i/2, df_results['47'].iloc[i], color = threshold_line_color, edgecolor = 'black', zorder = 6)
@@ -479,7 +476,10 @@ def check_results_files(results_file, count):
 		plt.ylabel(cap47)
 		title = current_sample + " " + cap47 + "||| " + "SD =  " +str(round(easotope_SD, 2)) 
 		plt.title(title)
-		plt.axhline(y = overall_temp_mean, color = threshold_line_color, linestyle='--', linewidth = 1.5, alpha = 0.8, label = "mean")
+		plt.axhline(y = overall_temp_mean, color = 'black', linestyle='--', linewidth = 1.5, alpha = 0.8, label = "mean")
+		plt.axhline(y = (overall_temp_mean + 3*easotope_SD), color = threshold_line_color, linestyle='--', linewidth = 1, alpha = 0.5, label = "+ 3 SD")
+		plt.axhline(y = (overall_temp_mean - 3*easotope_SD), color = threshold_line_color, linestyle='--', linewidth = 1, alpha = 0.5, label = "- 3 SD")
+
 		#plt.axhline(y = overall_temp_mean + easotope_SD, color= threshold_line_color, linestyle = '--', linewidth = 1, alpha = 0.6, label = "Mean + 1 SD")
 		plt.legend(loc = "upper right")
 		os.chdir(data_checks_folder)
